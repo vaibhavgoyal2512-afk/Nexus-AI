@@ -36,7 +36,13 @@ client = Groq(api_key=GROQ_API_KEY)
 
 # ---------------- EMBEDDING MODEL ----------------
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+embedding_model = None
+
+def get_embedding_model():
+    global embedding_model
+    if embedding_model is None:
+        embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    return embedding_model
 
 # ---------------- PDF STORAGE ----------------
 
@@ -315,7 +321,8 @@ def upload_pdf():
     chunk_size = 500
     pdf_chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
 
-    embeddings = embedding_model.encode(pdf_chunks)
+    model = get_embedding_model()
+    embeddings = model.encode(pdf_chunks)
 
     dimension = embeddings.shape[1]
     pdf_index = faiss.IndexFlatL2(dimension)
@@ -339,7 +346,8 @@ def ask_pdf():
     data = request.json
     question = data.get("question")
 
-    question_embedding = embedding_model.encode([question])
+    model = get_embedding_model()
+    question_embedding = model.encode([question])
     D, I = pdf_index.search(np.array(question_embedding), 3)
 
     context = "\n".join([pdf_chunks[i] for i in I[0]])
