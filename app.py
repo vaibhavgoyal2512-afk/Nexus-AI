@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, render_template, session, redirect, u
 import requests
 import base64
 import pdfplumber
-from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from flask_mysqldb import MySQL
@@ -41,6 +40,7 @@ embedding_model = None
 def get_embedding_model():
     global embedding_model
     if embedding_model is None:
+        from sentence_transformers import SentenceTransformer
         embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
     return embedding_model
 
