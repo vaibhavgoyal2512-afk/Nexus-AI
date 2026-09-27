@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Nexus AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="auth-container">
+    <div class="auth-header">
+      <a href="/" class="auth-brand">
+        <div class="brand-icon">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <span>Nexus AI</span>
+      </a>
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-subtitle">Sign in to your account to continue</p>
+    </div>
+
+    <form class="auth-form" action="/login" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <div class="input-wrapper">
+          <i data-lucide="mail" class="input-icon"></i>
+          <input type="email" id="email" name="email" class="form-input" placeholder="name@example.com" required autocomplete="email">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrapper">
+          <i data-lucide="lock" class="input-icon"></i>
+          <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-auth">Sign In</button>
+    </form>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="/register" class="auth-link">Create one</a>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+</body>
+</html>

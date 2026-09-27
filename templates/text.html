@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Text Generator - Nexus AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='text.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="brand-logo">
+          <div class="brand-icon">
+            <i data-lucide="sparkles"></i>
+          </div>
+          <span>Nexus AI</span>
+        </a>
+        <button class="btn-icon" onclick="toggleSidebar()">
+          <i data-lucide="chevron-left"></i>
+        </button>
+      </div>
+
+      <div style="padding: 16px 12px 0 12px;">
+        <button class="btn-primary" style="width: 100%; border-radius: var(--radius-md);" onclick="startNewChat()">
+          <i data-lucide="plus"></i>
+          <span>New Text Chat</span>
+        </button>
+      </div>
+
+      <nav class="nav-section">
+        <a href="/" class="nav-item">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="/text" class="nav-item active">
+          <i data-lucide="message-square"></i>
+          <span>Text Generator</span>
+        </a>
+        <a href="/image" class="nav-item">
+          <i data-lucide="image"></i>
+          <span>Image Studio</span>
+        </a>
+        <a href="/pdf" class="nav-item">
+          <i data-lucide="file-text"></i>
+          <span>PDF Assistant</span>
+        </a>
+      </nav>
+
+      <div class="history-section">
+        <div class="history-title">Chat History</div>
+        <div class="history-list" id="history-list">
+          <!-- Populated by text.js -->
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        {% if session.get('user_id') %}
+        <div class="user-profile">
+          <div class="user-avatar">{{ session.get('name', 'U')[0] | upper }}</div>
+          <div class="user-details">
+            <span class="user-name">{{ session.get('name') }}</span>
+            <span class="user-email">{{ session.get('email') }}</span>
+          </div>
+        </div>
+        <a href="/logout" class="btn-icon" title="Logout">
+          <i data-lucide="log-out"></i>
+        </a>
+        {% else %}
+        <div class="user-profile" style="gap: 8px;">
+          <a href="/login" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem;">Login</a>
+          <a href="/register" class="btn-primary" style="padding: 6px 12px; font-size: 0.82rem;">Register</a>
+        </div>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-icon topbar-menu-btn" onclick="toggleSidebar()" title="Open Sidebar">
+            <i data-lucide="menu"></i>
+          </button>
+          <h1 class="page-title">
+            <span>AI Text Generator</span>
+            <span class="model-badge">Groq / GPT-OSS 20B</span>
+          </h1>
+        </div>
+        <div class="topbar-right">
+          <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">
+            <i data-lucide="moon" id="theme-icon"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Workspace -->
+      <div class="chat-workspace">
+        <div class="chat-messages-container" id="chat-messages">
+          <!-- Welcome screen or messages dynamically rendered -->
+          <div class="welcome-container" id="welcome-screen">
+            <div class="welcome-icon">
+              <i data-lucide="bot"></i>
+            </div>
+            <h2 class="welcome-title">How can Nexus AI assist you today?</h2>
+            <p class="welcome-sub">Type a prompt below or pick one of these suggestions to get started.</p>
+
+            <div class="suggestion-grid">
+              <div class="suggestion-card" onclick="useSuggestion('Write a clean Python script for web scraping HTML tables.')">
+                <h4>Python Web Scraper</h4>
+                <p>Scrape tables into clean JSON data</p>
+              </div>
+              <div class="suggestion-card" onclick="useSuggestion('Explain quantum computing in simple terms for a beginner.')">
+                <h4>Quantum Computing</h4>
+                <p>Simple conceptual explanation</p>
+              </div>
+              <div class="suggestion-card" onclick="useSuggestion('Draft a professional email proposing a project partnership.')">
+                <h4>Business Email</h4>
+                <p>Partnership proposal draft</p>
+              </div>
+              <div class="suggestion-card" onclick="useSuggestion('Create an optimized SQL query for user activity metrics.')">
+                <h4>SQL Metrics Query</h4>
+                <p>Data aggregation & indexing</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Composer Area -->
+        <div class="composer-wrapper">
+          <div class="composer-box">
+            <textarea id="prompt-input" class="composer-textarea" placeholder="Ask Nexus AI anything... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+            <div class="composer-actions">
+              <button id="stop-btn" class="btn-icon" style="display:none; color: #ef4444;" title="Stop Generation" onclick="stopGeneration()">
+                <i data-lucide="square"></i>
+              </button>
+              <button id="send-btn" class="btn-send" onclick="sendMessage()" title="Send Prompt">
+                <i data-lucide="send"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='text.js') }}"></script>
+</body>
+</html>

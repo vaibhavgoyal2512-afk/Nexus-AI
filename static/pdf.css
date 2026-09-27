@@ -1,0 +1,79 @@
+/* static/pdf.css - AI PDF Assistant Styling */
+
+@import url('./main.css');
+@import url('./text.css');
+
+.pdf-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: calc(100vh - 64px);
+  position: relative;
+  overflow: hidden;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+/* Sidebar Active PDF Status Badge */
+.sidebar-active-pdf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.sidebar-pdf-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* Composer Floating PDF Pill Indicator */
+.composer-pdf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #10b981;
+  margin-bottom: 8px;
+  margin-left: 4px;
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.3s ease;
+  max-width: 900px;
+}
+
+.btn-pill-change {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.btn-pill-change:hover {
+  color: var(--primary);
+}
+
+/* Drag hover glow on workspace */
+.pdf-workspace.dragover {
+  background: rgba(99, 102, 241, 0.05);
+  outline: 2px dashed var(--primary);
+  outline-offset: -10px;
+}

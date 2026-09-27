@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Nexus AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="auth-container">
+    <div class="auth-header">
+      <a href="/" class="auth-brand">
+        <div class="brand-icon">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <span>Nexus AI</span>
+      </a>
+      <h2 class="auth-title">Create an Account</h2>
+      <p class="auth-subtitle">Join Nexus AI to save chat history & unlimited prompts</p>
+    </div>
+
+    <form class="auth-form" action="/register" method="POST" onsubmit="return validateForm()">
+      <div class="form-group">
+        <label class="form-label" for="name">Full Name</label>
+        <div class="input-wrapper">
+          <i data-lucide="user" class="input-icon"></i>
+          <input type="text" id="name" name="name" class="form-input" placeholder="John Doe" required autocomplete="name">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <div class="input-wrapper">
+          <i data-lucide="mail" class="input-icon"></i>
+          <input type="email" id="email" name="email" class="form-input" placeholder="name@example.com" required autocomplete="email">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrapper">
+          <i data-lucide="lock" class="input-icon"></i>
+          <input type="password" id="password" name="password" class="form-input" placeholder="e.g. Password123!" required autocomplete="new-password" oninput="checkPasswordRules()">
+        </div>
+      </div>
+
+      <div class="pw-rules" id="pw-rules">
+        <div class="rule-item" id="rule-len"><i data-lucide="check-circle-2"></i> At least 8 characters</div>
+        <div class="rule-item" id="rule-upper"><i data-lucide="check-circle-2"></i> Starts with an UPPERCASE letter</div>
+        <div class="rule-item" id="rule-num"><i data-lucide="check-circle-2"></i> Contains at least one number</div>
+        <div class="rule-item" id="rule-spec"><i data-lucide="check-circle-2"></i> Contains at least one special character</div>
+      </div>
+
+      <button type="submit" class="btn-auth">Register Account</button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login" class="auth-link">Sign In</a>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    function checkPasswordRules() {
+      const pw = document.getElementById('password').value;
+
+      const isLen = pw.length >= 8;
+      const isUpper = pw.length > 0 && pw[0] === pw[0].toUpperCase() && pw[0] !== pw[0].toLowerCase();
+      const isNum = /\d/.test(pw);
+      const isSpec = /[^a-zA-Z0-9]/.test(pw);
+
+      updateRule('rule-len', isLen);
+      updateRule('rule-upper', isUpper);
+      updateRule('rule-num', isNum);
+      updateRule('rule-spec', isSpec);
+
+      return isLen && isUpper && isNum && isSpec;
+    }
+
+    function updateRule(id, isValid) {
+      const el = document.getElementById(id);
+      if (isValid) {
+        el.classList.add('valid');
+        el.classList.remove('invalid');
+      } else {
+        el.classList.add('invalid');
+        el.classList.remove('valid');
+      }
+    }
+
+    function validateForm() {
+      return checkPasswordRules();
+    }
+  </script>
+</body>
+</html>

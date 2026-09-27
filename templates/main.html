@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus AI - Next-Gen Intelligent Workspace</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="brand-logo">
+          <div class="brand-icon">
+            <i data-lucide="sparkles"></i>
+          </div>
+          <span>Nexus AI</span>
+        </a>
+        <button class="btn-icon" onclick="toggleSidebar()" title="Toggle Sidebar">
+          <i data-lucide="chevron-left"></i>
+        </button>
+      </div>
+
+      <nav class="nav-section">
+        <a href="/" class="nav-item active">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="/text" class="nav-item">
+          <i data-lucide="message-square-plus"></i>
+          <span>Text Generator</span>
+        </a>
+        <a href="/image" class="nav-item">
+          <i data-lucide="image"></i>
+          <span>Image Studio</span>
+        </a>
+        <a href="/pdf" class="nav-item">
+          <i data-lucide="file-text"></i>
+          <span>PDF Assistant</span>
+        </a>
+      </nav>
+
+      <div class="history-section">
+        <div class="history-title">Quick Actions</div>
+        <div class="history-list">
+          <a href="/text" class="history-item">
+            <span class="history-item-title">+ New Text Chat</span>
+          </a>
+          <a href="/image" class="history-item">
+            <span class="history-item-title">+ New Image Prompt</span>
+          </a>
+          <a href="/pdf" class="history-item">
+            <span class="history-item-title">+ Upload PDF Document</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        {% if session.get('user_id') %}
+        <div class="user-profile">
+          <div class="user-avatar">{{ session.get('name', 'U')[0] | upper }}</div>
+          <div class="user-details">
+            <span class="user-name">{{ session.get('name') }}</span>
+            <span class="user-email">{{ session.get('email') }}</span>
+          </div>
+        </div>
+        <a href="/logout" class="btn-icon" title="Logout">
+          <i data-lucide="log-out"></i>
+        </a>
+        {% else %}
+        <div class="user-profile" style="gap: 8px;">
+          <a href="/login" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem;">Login</a>
+          <a href="/register" class="btn-primary" style="padding: 6px 12px; font-size: 0.82rem;">Register</a>
+        </div>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-icon topbar-menu-btn" onclick="toggleSidebar()" title="Open Sidebar">
+            <i data-lucide="menu"></i>
+          </button>
+          <h1 class="page-title">
+            <span>Dashboard</span>
+            <span class="model-badge">Groq & FLUX.1 Powered</span>
+          </h1>
+        </div>
+        <div class="topbar-right">
+          <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Toggle Light/Dark Theme">
+            <i data-lucide="moon" id="theme-icon"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Body -->
+      <div class="dashboard-view-wrapper">
+        <div class="dashboard-view animate-fade-in">
+          <section class="hero-section">
+            <div class="hero-tag">
+              <i data-lucide="zap"></i> AI Powerhouse Platform
+            </div>
+            <h2 class="hero-title">Experience Next-Level Intelligence</h2>
+            <p class="hero-subtitle">
+              Generate complex code, create hyper-realistic visuals, and interact with PDF documents with seamless ease.
+            </p>
+          </section>
+
+          <section class="grid-cards">
+            <!-- Text Generator Card -->
+            <div class="feature-card text">
+              <div class="feature-icon">
+                <i data-lucide="bot"></i>
+              </div>
+              <h3 class="feature-title">AI Text Generator</h3>
+              <p class="feature-desc">
+                Leverage Groq's high-speed LLaMA backend to generate code, draft articles, analyze logic, and brainstorm solutions.
+              </p>
+              <a href="/text" class="btn-primary">
+                <span>Open Text AI</span>
+                <i data-lucide="arrow-right"></i>
+              </a>
+            </div>
+
+            <!-- Image Studio Card -->
+            <div class="feature-card image">
+              <div class="feature-icon">
+                <i data-lucide="sparkles"></i>
+              </div>
+              <h3 class="feature-title">AI Image Studio</h3>
+              <p class="feature-desc">
+                Turn text prompts into high-definition digital artwork using state-of-the-art FLUX.1 Schnell image diffusion models.
+              </p>
+              <a href="/image" class="btn-primary">
+                <span>Open Image Studio</span>
+                <i data-lucide="arrow-right"></i>
+              </a>
+            </div>
+
+            <!-- PDF Assistant Card -->
+            <div class="feature-card pdf">
+              <div class="feature-icon">
+                <i data-lucide="file-search"></i>
+              </div>
+              <h3 class="feature-title">AI PDF Assistant</h3>
+              <p class="feature-desc">
+                Upload PDF documents for instant semantic search, accurate vector Q&A, and comprehensive context extraction.
+              </p>
+              <a href="/pdf" class="btn-primary">
+                <span>Open PDF Assistant</span>
+                <i data-lucide="arrow-right"></i>
+              </a>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Lucide Icons Initialization
+    lucide.createIcons();
+
+    // Theme Switch Logic
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcon(savedTheme);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+      const icon = document.getElementById('theme-icon');
+      if (icon) {
+        icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+        lucide.createIcons();
+      }
+    }
+
+    // Sidebar Mobile & Desktop Collapse Logic
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const appContainer = document.querySelector('.app-container');
+      if (!sidebar) return;
+      const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+      if (isCollapsed && window.innerWidth > 768) {
+        sidebar.classList.add('collapsed');
+        if (appContainer) appContainer.classList.add('sidebar-is-collapsed');
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('mobile-overlay');
+      const appContainer = document.querySelector('.app-container');
+      if (!sidebar) return;
+
+      if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('mobile-open');
+        if (overlay) overlay.classList.toggle('active');
+      } else {
+        sidebar.classList.toggle('collapsed');
+        const isNowCollapsed = sidebar.classList.contains('collapsed');
+        if (appContainer) {
+          appContainer.classList.toggle('sidebar-is-collapsed', isNowCollapsed);
+        }
+        localStorage.setItem('sidebar_collapsed', isNowCollapsed ? 'true' : 'false');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      initSidebar();
+    });
+  </script>
+</body>
+</html>
