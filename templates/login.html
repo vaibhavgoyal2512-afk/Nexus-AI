@@ -24,6 +24,7 @@
     </div>
 
     <form class="auth-form" action="/login" method="POST">
+      <div id="auth-alert-box"></div>
       <div class="form-group">
         <label class="form-label" for="email">Email Address</label>
         <div class="input-wrapper">
@@ -52,6 +53,79 @@
     lucide.createIcons();
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('registered') === '1' || urlParams.get('success')) {
+      showAuthAlert('Account created successfully. Please log in.', 'success');
+    }
+
+    function showAuthAlert(message, type = 'error') {
+      const alertBox = document.getElementById('auth-alert-box');
+      if (!alertBox) return;
+      const iconName = type === 'success' ? 'check-circle-2' : 'alert-circle';
+      alertBox.innerHTML = `
+        <div class="auth-alert ${type}">
+          <div class="auth-alert-icon">
+            <i data-lucide="${iconName}"></i>
+          </div>
+          <div class="auth-alert-content">${message}</div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function clearAuthAlert() {
+      const alertBox = document.getElementById('auth-alert-box');
+      if (alertBox) alertBox.innerHTML = '';
+    }
+
+    const loginForm = document.querySelector('.auth-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        clearAuthAlert();
+
+        const submitBtn = loginForm.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerText;
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Signing in...';
+
+        try {
+          const formData = new FormData(loginForm);
+          const response = await fetch('/login', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.redirected) {
+            window.location.href = response.url;
+            return;
+          }
+
+          const responseText = await response.text();
+
+          if (response.ok && (responseText.includes('Dashboard') || responseText.includes('Nexus AI - Next-Gen'))) {
+            window.location.href = '/';
+            return;
+          }
+
+          let errorMsg = 'Invalid email or password';
+          if (responseText.includes('Invalid credentials')) {
+            errorMsg = 'Invalid email or password. Please check your details.';
+          } else if (responseText.trim()) {
+            const cleanText = responseText.replace(/<[^>]*>?/gm, '').trim();
+            if (cleanText) errorMsg = cleanText;
+          }
+
+          showAuthAlert(errorMsg, 'error');
+        } catch (err) {
+          showAuthAlert('Unable to connect to server. Please try again.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = originalBtnText;
+        }
+      });
+    }
   </script>
 </body>
 </html>

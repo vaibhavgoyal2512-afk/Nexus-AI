@@ -62,20 +62,39 @@
 
       <div class="sidebar-footer">
         {% if session.get('user_id') %}
-        <div class="user-profile">
-          <div class="user-avatar">{{ session.get('name', 'U')[0] | upper }}</div>
-          <div class="user-details">
-            <span class="user-name">{{ session.get('name') }}</span>
-            <span class="user-email">{{ session.get('email') }}</span>
+        <div class="profile-wrapper" id="profile-wrapper">
+          <button type="button" class="profile-card" id="profile-trigger" onclick="toggleProfileMenu(event)" aria-expanded="false" aria-haspopup="true" title="User Profile Menu">
+            <div class="user-avatar">{{ (session.get('name') or 'User')[0] | upper }}</div>
+            <div class="user-details">
+              <span class="user-name">{{ session.get('name') }}</span>
+              <span class="user-email">{{ session.get('email') }}</span>
+            </div>
+            <i data-lucide="chevron-up" class="profile-chevron" id="profile-chevron"></i>
+          </button>
+
+          <div class="profile-dropdown" id="profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-avatar lg">{{ (session.get('name') or 'User')[0] | upper }}</div>
+              <div class="user-details">
+                <span class="user-name">{{ session.get('name') }}</span>
+                <span class="user-email">{{ session.get('email') }}</span>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" onclick="openAccountModal()">
+              <i data-lucide="user"></i>
+              <span>Account Info</span>
+            </button>
+            <a href="/logout" class="dropdown-item danger">
+              <i data-lucide="log-out"></i>
+              <span>Logout</span>
+            </a>
           </div>
         </div>
-        <a href="/logout" class="btn-icon" title="Logout">
-          <i data-lucide="log-out"></i>
-        </a>
         {% else %}
-        <div class="user-profile" style="gap: 8px;">
-          <a href="/login" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem;">Login</a>
-          <a href="/register" class="btn-primary" style="padding: 6px 12px; font-size: 0.82rem;">Register</a>
+        <div class="logged-out-actions">
+          <a href="/login" class="btn-secondary nav-auth-btn">Login</a>
+          <a href="/register" class="btn-primary nav-auth-btn">Register</a>
         </div>
         {% endif %}
       </div>
@@ -147,6 +166,49 @@
     </main>
   </div>
 
+  {% if session.get('user_id') %}
+  <div class="modal-overlay" id="account-modal">
+    <div class="account-modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Account Details</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAccountModal()" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="account-info-body">
+        <div class="account-profile-header">
+          <div class="user-avatar lg">{{ (session.get('name') or 'User')[0] | upper }}</div>
+          <div class="user-details">
+            <span class="user-name" style="font-size: 1rem;">{{ session.get('name') }}</span>
+            <span class="user-email">{{ session.get('email') }}</span>
+          </div>
+        </div>
+
+        <div class="account-detail-group">
+          <span class="account-detail-label">Full Name</span>
+          <span class="account-detail-value">{{ session.get('name') }}</span>
+        </div>
+
+        <div class="account-detail-group">
+          <span class="account-detail-label">Email Address</span>
+          <span class="account-detail-value">{{ session.get('email') }}</span>
+        </div>
+
+        <div class="account-detail-group">
+          <span class="account-detail-label">Account Status</span>
+          <div class="account-badge">
+            <i data-lucide="check-circle-2" style="font-size: 14px;"></i> Active User
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeAccountModal()" style="padding: 8px 18px;">Close</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
   <script src="{{ url_for('static', filename='image.js') }}"></script>
 </body>
 </html>

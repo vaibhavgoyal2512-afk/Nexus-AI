@@ -40,12 +40,12 @@
       </div>
 
       <!-- Active PDF Sidebar Status Badge -->
-      <div id="sidebar-pdf-badge" style="display:none; padding: 12px 12px 0 12px;">
-        <div class="sidebar-active-pdf">
-          <i data-lucide="file-text" style="color: #10b981;"></i>
+      <div id="sidebar-pdf-badge" class="sidebar-badge-wrap" style="display:none;">
+        <div class="sidebar-active-pdf" onclick="openPdfPreviewModal()" title="Click to preview PDF document">
+          <i data-lucide="file-text" class="sidebar-pdf-icon"></i>
           <span id="sidebar-pdf-name" class="sidebar-pdf-title">No PDF loaded</span>
-          <button class="btn-icon" onclick="triggerPdfUpload()" title="Change PDF" style="width:24px; height:24px;">
-            <i data-lucide="refresh-cw" style="width:12px; height:12px;"></i>
+          <button type="button" class="btn-icon sidebar-pdf-change-btn" onclick="event.stopPropagation(); triggerPdfUpload(event);" title="Change PDF">
+            <i data-lucide="refresh-cw"></i>
           </button>
         </div>
       </div>
@@ -78,20 +78,39 @@
 
       <div class="sidebar-footer">
         {% if session.get('user_id') %}
-        <div class="user-profile">
-          <div class="user-avatar">{{ session.get('name', 'U')[0] | upper }}</div>
-          <div class="user-details">
-            <span class="user-name">{{ session.get('name') }}</span>
-            <span class="user-email">{{ session.get('email') }}</span>
+        <div class="profile-wrapper" id="profile-wrapper">
+          <button type="button" class="profile-card" id="profile-trigger" onclick="toggleProfileMenu(event)" aria-expanded="false" aria-haspopup="true" title="User Profile Menu">
+            <div class="user-avatar">{{ (session.get('name') or 'User')[0] | upper }}</div>
+            <div class="user-details">
+              <span class="user-name">{{ session.get('name') }}</span>
+              <span class="user-email">{{ session.get('email') }}</span>
+            </div>
+            <i data-lucide="chevron-up" class="profile-chevron" id="profile-chevron"></i>
+          </button>
+
+          <div class="profile-dropdown" id="profile-dropdown">
+            <div class="dropdown-header">
+              <div class="user-avatar lg">{{ (session.get('name') or 'User')[0] | upper }}</div>
+              <div class="user-details">
+                <span class="user-name">{{ session.get('name') }}</span>
+                <span class="user-email">{{ session.get('email') }}</span>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" onclick="openAccountModal()">
+              <i data-lucide="user"></i>
+              <span>Account Info</span>
+            </button>
+            <a href="/logout" class="dropdown-item danger">
+              <i data-lucide="log-out"></i>
+              <span>Logout</span>
+            </a>
           </div>
         </div>
-        <a href="/logout" class="btn-icon" title="Logout">
-          <i data-lucide="log-out"></i>
-        </a>
         {% else %}
-        <div class="user-profile" style="gap: 8px;">
-          <a href="/login" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem;">Login</a>
-          <a href="/register" class="btn-primary" style="padding: 6px 12px; font-size: 0.82rem;">Register</a>
+        <div class="logged-out-actions">
+          <a href="/login" class="btn-secondary nav-auth-btn">Login</a>
+          <a href="/register" class="btn-primary nav-auth-btn">Register</a>
         </div>
         {% endif %}
       </div>
@@ -134,24 +153,26 @@
           </div>
         </div>
 
-        <!-- Floating Composer with Attach Option -->
+        <!-- Floating Composer with Attach Option (ChatGPT Style) -->
         <div class="composer-wrapper">
-          <!-- Active PDF indicator pill above composer -->
-          <div id="composer-pdf-pill" class="composer-pdf-pill" style="display:none;">
-            <i data-lucide="file-text"></i>
-            <span id="composer-pdf-name">document.pdf</span>
-            <button onclick="triggerPdfUpload()" class="btn-pill-change" title="Change PDF">Change</button>
+          <!-- Compact ChatGPT-style document attachment chip -->
+          <div id="composer-pdf-pill" class="chatgpt-input-pill" style="display:none;" onclick="openPdfPreviewModal()" title="Preview attached document">
+            <span class="chatgpt-pill-icon">PDF</span>
+            <span id="composer-pdf-name" class="chatgpt-pill-name">document.pdf</span>
+            <button type="button" class="chatgpt-pill-close" onclick="triggerPdfUpload(event)" title="Change PDF">
+              <i data-lucide="refresh-cw" style="width:11px; height:11px;"></i>
+            </button>
           </div>
 
           <div class="composer-box">
-            <!-- Upload Icon Button in Input Bar -->
-            <button class="btn-icon" onclick="triggerPdfUpload()" title="Attach / Upload PDF Document" style="color: var(--primary);">
-              <i data-lucide="paperclip"></i>
+            <!-- Upload Icon Button in Input Bar (+) -->
+            <button type="button" class="btn-icon btn-attach" onclick="triggerPdfUpload()" title="Attach PDF Document">
+              <i data-lucide="plus"></i>
             </button>
-            <textarea id="pdf-question-input" class="composer-textarea" placeholder="Ask any question about your uploaded PDF document..." rows="1"></textarea>
+            <textarea id="pdf-question-input" class="composer-textarea" placeholder="Ask anything about your PDF document..." rows="1"></textarea>
             <div class="composer-actions">
-              <button id="pdf-send-btn" class="btn-send" onclick="askPdfQuestion()" title="Ask PDF Question">
-                <i data-lucide="send"></i>
+              <button id="pdf-send-btn" class="btn-send" onclick="askPdfQuestion()" title="Send">
+                <i data-lucide="arrow-up"></i>
               </button>
             </div>
           </div>
@@ -160,6 +181,141 @@
     </main>
   </div>
 
+  {% if session.get('user_id') %}
+  <div class="modal-overlay" id="account-modal">
+    <div class="account-modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Account Details</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAccountModal()" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="account-info-body">
+        <div class="account-profile-header">
+          <div class="user-avatar lg">{{ (session.get('name') or 'User')[0] | upper }}</div>
+          <div class="user-details">
+            <span class="user-name" style="font-size: 1rem;">{{ session.get('name') }}</span>
+            <span class="user-email">{{ session.get('email') }}</span>
+          </div>
+        </div>
+
+        <div class="account-detail-group">
+          <span class="account-detail-label">Full Name</span>
+          <span class="account-detail-value">{{ session.get('name') }}</span>
+        </div>
+
+        <div class="account-detail-group">
+          <span class="account-detail-label">Email Address</span>
+          <span class="account-detail-value">{{ session.get('email') }}</span>
+        </div>
+
+        <div class="account-detail-group">
+          <span class="account-detail-label">Account Status</span>
+          <div class="account-badge">
+            <i data-lucide="check-circle-2" style="font-size: 14px;"></i> Active User
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeAccountModal()" style="padding: 8px 18px;">Close</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ChatGPT-Style PDF Document Preview Modal -->
+  <div class="modal-overlay pdf-preview-overlay" id="pdf-preview-modal" onclick="handlePreviewOverlayClick(event)">
+    <div class="pdf-preview-dialog" onclick="event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="pdf-preview-header">
+        <div class="pdf-preview-header-left">
+          <div class="pdf-file-icon-badge">
+            <span class="badge-text">PDF</span>
+          </div>
+          <div class="pdf-preview-title-wrap">
+            <h3 class="pdf-preview-filename" id="preview-modal-filename">document.pdf</h3>
+            <div class="pdf-preview-submeta">
+              <span id="preview-modal-size">0 KB</span>
+              <span class="meta-dot">•</span>
+              <span id="preview-modal-chunks">0 text chunks</span>
+              <span class="meta-dot">•</span>
+              <span class="preview-badge-rag"><i data-lucide="sparkles" style="width:12px; height:12px;"></i> FAISS Vector Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pdf-preview-header-right">
+          <!-- View Tabs Toggle -->
+          <div class="preview-tabs">
+            <button type="button" class="preview-tab active" id="tab-btn-viewer" onclick="switchPreviewTab('viewer')">
+              <i data-lucide="file-text" style="width:14px; height:14px;"></i>
+              <span>PDF Viewer</span>
+            </button>
+            <button type="button" class="preview-tab" id="tab-btn-chunks" onclick="switchPreviewTab('chunks')">
+              <i data-lucide="layers" style="width:14px; height:14px;"></i>
+              <span>Indexed Chunks (<span id="preview-chunks-badge">0</span>)</span>
+            </button>
+          </div>
+
+          <a id="preview-modal-popout" href="/view_pdf" target="_blank" class="preview-action-icon-btn" title="Open in New Window / Tab">
+            <i data-lucide="external-link"></i>
+          </a>
+          <a id="preview-modal-download" href="/download_pdf" class="preview-action-icon-btn" title="Download Document">
+            <i data-lucide="download"></i>
+          </a>
+          <button type="button" class="preview-action-icon-btn close-btn" onclick="closePdfPreviewModal()" title="Close Preview">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="pdf-preview-body">
+        <!-- Tab 1: Interactive PDF Viewer -->
+        <div class="preview-pane active" id="preview-pane-viewer">
+          <div class="iframe-container" id="pdf-iframe-container">
+            <iframe id="pdf-preview-iframe" src="about:blank" title="PDF Document Preview"></iframe>
+          </div>
+          <div class="preview-fallback" id="preview-fallback-msg" style="display:none;">
+            <i data-lucide="file-text" style="width:48px; height:48px; color:var(--text-sub); margin-bottom:12px;"></i>
+            <h4>Document Loaded</h4>
+            <p>Your browser is displaying the document directly or you can open it in a dedicated window.</p>
+            <a id="fallback-open-btn" href="/view_pdf" target="_blank" class="btn-primary" style="margin-top:14px;">
+              <i data-lucide="external-link"></i> Open PDF in Full Viewer
+            </a>
+          </div>
+        </div>
+
+        <!-- Tab 2: Extracted Text & Vector Chunks -->
+        <div class="preview-pane" id="preview-pane-chunks">
+          <div class="chunks-container" id="preview-chunks-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pdf-preview-footer">
+        <div class="quick-ask-hints">
+          <span class="quick-ask-label">Ask AI about document:</span>
+          <button type="button" class="quick-ask-chip" onclick="quickAskQuestion('Summarize the main points of this document')">
+            Summarize key points
+          </button>
+          <button type="button" class="quick-ask-chip" onclick="quickAskQuestion('What is the main objective of this document?')">
+            Main objective
+          </button>
+          <button type="button" class="quick-ask-chip" onclick="quickAskQuestion('What are the key technical concepts and statistics mentioned?')">
+            Key concepts & data
+          </button>
+        </div>
+        <button type="button" class="btn-secondary" onclick="closePdfPreviewModal()" style="padding: 7px 18px; font-size: 0.85rem; border-radius: var(--radius-md);">
+          Close Preview
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
   <script src="{{ url_for('static', filename='pdf.js') }}"></script>
 </body>
 </html>

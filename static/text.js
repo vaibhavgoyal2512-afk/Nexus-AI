@@ -85,42 +85,24 @@ function initTextareaAutoResize() {
   });
 }
 
-// Load Chat History (Backend + LocalStorage 'ai_chats')
 async function loadChats() {
-  let localData = [];
-  try {
-    const raw = localStorage.getItem('ai_chats');
-    if (raw) localData = JSON.parse(raw);
-  } catch (err) {
-    console.error('Failed to parse local ai_chats', err);
-  }
-
   try {
     const res = await fetch('/get_chats');
     if (res.ok) {
       const serverChats = await res.json();
-      // Filter for text chats only
-      const serverTextChats = serverChats.filter(c => c.type === 'text');
-      
-      // Merge server chats and local chats avoiding duplicates
-      const mergedMap = new Map();
-      serverTextChats.forEach(c => mergedMap.set(String(c.id), c));
-      localData.forEach(c => {
-        if (!mergedMap.has(String(c.id))) {
-          mergedMap.set(String(c.id), c);
-        }
-      });
-
-      currentChats = Array.from(mergedMap.values());
+      currentChats = serverChats.filter(c => c.type === 'text' || !c.type || (c.messages && c.messages.some(m => m.type === 'text')));
     } else {
-      currentChats = localData;
+      const raw = localStorage.getItem('ai_chats');
+      if (raw) currentChats = JSON.parse(raw);
     }
   } catch (err) {
-    console.log('Offline or error loading backend chats, using local storage:', err);
-    currentChats = localData;
+    console.error('Using local storage for text chats due to error:', err);
+    try {
+      const raw = localStorage.getItem('ai_chats');
+      if (raw) currentChats = JSON.parse(raw);
+    } catch (e) {}
   }
 
-  // Save merged
   localStorage.setItem('ai_chats', JSON.stringify(currentChats));
   renderSidebarHistory();
 }
@@ -135,13 +117,21 @@ function renderSidebarHistory() {
   }
 
   listContainer.innerHTML = currentChats.map((chat) => {
-    const title = chat.title || chat.user || 'Untitled Chat';
+    const cid = String(chat.conversation_id || chat.id);
+    const title = chat.title || (chat.messages && chat.messages[0] ? chat.messages[0].user : chat.user) || 'Untitled Chat';
+    const isActive = String(activeChatId) === cid;
+
     return `
-      <div class="history-item ${chat.id === activeChatId ? 'active' : ''}" onclick="selectChat('${chat.id}')">
+      <div class="history-item ${isActive ? 'active' : ''}" onclick="selectChat('${cid}')">
         <span class="history-item-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
-        <button class="history-item-del" onclick="deleteChat(event, '${chat.id}')" title="Delete chat">
-          <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
-        </button>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <button class="history-item-del" onclick="renameChat(event, '${cid}')" title="Rename chat" style="opacity: 0.7;">
+            <i data-lucide="pencil" style="width:13px; height:13px;"></i>
+          </button>
+          <button class="history-item-del" onclick="deleteChat(event, '${cid}')" title="Delete chat">
+            <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -149,18 +139,36 @@ function renderSidebarHistory() {
   lucide.createIcons();
 }
 
-function selectChat(id) {
-  activeChatId = id;
-  const chat = currentChats.find(c => String(c.id) === String(id));
+async function selectChat(id) {
+  activeChatId = String(id);
+  const chat = currentChats.find(c => String(c.conversation_id || c.id) === String(id));
+  
+  if (chat) {
+    try {
+      const res = await fetch(`/get_conversation/${id}`);
+      if (res.ok) {
+        const serverMsgs = await res.json();
+        if (serverMsgs && serverMsgs.length > 0) {
+          chat.messages = serverMsgs;
+        }
+      }
+    } catch (err) {
+      console.log('Using cached messages for conversation:', err);
+    }
+  }
+
   if (!chat) return;
 
   const container = document.getElementById('chat-messages');
   container.innerHTML = '';
 
-  renderUserMessage(chat.user);
-  renderAIMessage(chat.ai);
-  renderSidebarHistory();
+  const msgs = chat.messages || [{ user: chat.user, ai: chat.ai }];
+  msgs.forEach(m => {
+    if (m.user) renderUserMessage(m.user);
+    if (m.ai) renderAIMessage(m.ai);
+  });
 
+  renderSidebarHistory();
   closeMobileSidebar();
 }
 
@@ -228,27 +236,22 @@ async function sendMessage() {
   textarea.value = '';
   textarea.style.height = 'auto';
 
-  // Hide welcome screen if present
   const welcome = document.getElementById('welcome-screen');
   if (welcome) welcome.remove();
 
-  // Render User Message (RIGHT side, LEFT text)
   renderUserMessage(prompt);
 
-  // Show AI Loading Indicator (LEFT side)
   const loadingId = 'loading-' + Date.now();
   renderLoadingState(loadingId);
 
-  // Show stop button, disable send button
   setGeneratingState(true);
-
   abortController = new AbortController();
 
   try {
     const res = await fetch('/generate_text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, conversation_id: activeChatId }),
       signal: abortController.signal
     });
 
@@ -264,16 +267,35 @@ async function sendMessage() {
     const aiResponse = data.result || 'An error occurred generating text.';
     renderAIMessage(aiResponse);
 
-    // Save to state & LocalStorage
-    const newChatObj = {
-      id: Date.now(),
-      type: 'text',
-      user: prompt,
-      ai: aiResponse,
-      title: prompt.substring(0, 30)
-    };
+    const convId = String(data.conversation_id || activeChatId || ('conv_' + Date.now()));
+    const targetChatId = activeChatId || convId;
+    activeChatId = convId;
 
-    currentChats.unshift(newChatObj);
+    let convObj = currentChats.find(c => 
+      String(c.conversation_id || c.id) === String(convId) || 
+      String(c.conversation_id || c.id) === String(targetChatId) ||
+      String(c.id) === String(convId) ||
+      String(c.id) === String(targetChatId)
+    );
+
+    if (convObj) {
+      convObj.conversation_id = convId;
+      convObj.id = convObj.id || convId;
+      if (!convObj.messages) convObj.messages = [];
+      convObj.messages.push({ id: Date.now(), user: prompt, ai: aiResponse, type: 'text' });
+    } else {
+      convObj = {
+        id: convId,
+        conversation_id: convId,
+        type: 'text',
+        title: prompt.substring(0, 30),
+        user: prompt,
+        ai: aiResponse,
+        messages: [{ id: Date.now(), user: prompt, ai: aiResponse, type: 'text' }]
+      };
+      currentChats.unshift(convObj);
+    }
+
     localStorage.setItem('ai_chats', JSON.stringify(currentChats));
     renderSidebarHistory();
 
@@ -288,6 +310,61 @@ async function sendMessage() {
   } finally {
     setGeneratingState(false);
   }
+}
+
+function renameChat(e, id) {
+  if (e) e.stopPropagation();
+  const chat = currentChats.find(c => String(c.conversation_id || c.id) === String(id));
+  if (!chat) return;
+
+  showRenameModal(chat.title || '', async (newTitle) => {
+    chat.title = newTitle;
+    localStorage.setItem('ai_chats', JSON.stringify(currentChats));
+    renderSidebarHistory();
+
+    try {
+      const res = await fetch(`/rename_chat/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle })
+      });
+      if (res.ok) {
+        showToast('Conversation renamed', 'success');
+      } else {
+        showToast('Failed to rename conversation', 'error');
+      }
+    } catch (err) {
+      console.error('Error renaming conversation:', err);
+      showToast('Error renaming conversation', 'error');
+    }
+  });
+}
+
+function deleteChat(e, id) {
+  if (e) e.stopPropagation();
+
+  showDeleteModal(async () => {
+    currentChats = currentChats.filter(c => String(c.conversation_id || c.id) !== String(id));
+    localStorage.setItem('ai_chats', JSON.stringify(currentChats));
+
+    if (String(activeChatId) === String(id)) {
+      startNewChat();
+    } else {
+      renderSidebarHistory();
+    }
+
+    try {
+      const res = await fetch(`/delete_chat/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Conversation deleted', 'success');
+      } else {
+        showToast('Failed to delete conversation', 'error');
+      }
+    } catch (err) {
+      console.error('Error deleting conversation:', err);
+      showToast('Error deleting conversation', 'error');
+    }
+  });
 }
 
 function stopGeneration() {
@@ -487,28 +564,6 @@ function renderLoadingState(id) {
   scrollToBottom();
 }
 
-async function deleteChat(e, id) {
-  e.stopPropagation();
-  if (!confirm('Are you sure you want to delete this chat?')) return;
-
-  // Try backend delete
-  try {
-    await fetch(`/delete_chat/${id}`, { method: 'DELETE' });
-  } catch (err) {
-    console.log('Backend delete skipped or failed:', err);
-  }
-
-  // Delete from local array
-  currentChats = currentChats.filter(c => String(c.id) !== String(id));
-  localStorage.setItem('ai_chats', JSON.stringify(currentChats));
-
-  if (activeChatId === id) {
-    startNewChat();
-  } else {
-    renderSidebarHistory();
-  }
-}
-
 function scrollToBottom() {
   const container = document.getElementById('chat-messages');
   if (container) {
@@ -519,13 +574,4 @@ function scrollToBottom() {
 function removeElement(id) {
   const el = document.getElementById(id);
   if (el) el.remove();
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }

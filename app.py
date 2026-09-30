@@ -1,9 +1,15 @@
 import os
 import sys
 
-# Critical for Windows: Prevent Intel OpenMP error #15 crash when FAISS & PyTorch/SentenceTransformers coexist
+# Critical for Windows/Linux: Prevent Intel OpenMP error #15 crash when FAISS & PyTorch/SentenceTransformers coexist
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except Exception:
+    pass
 
 if hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -68,23 +74,40 @@ client = Groq(api_key=GROQ_API_KEY)
 embedding_model = None
 embedding_lock = threading.Lock()
 
-def get_embedding_model():
+def get_embeddings_for_texts(texts):
+    """
+    Generate embeddings for a list of text strings.
+    First tries HuggingFace Inference API (fast, zero local memory).
+    Falls back to lazy-loaded SentenceTransformer on demand if HF API is unavailable.
+    """
+    if isinstance(texts, str):
+        texts = [texts]
+
+    # 1. Try HF Inference API first if key exists (lightweight, cloud-offloaded)
+    if HF_API_KEY:
+        try:
+            image_client = InferenceClient(api_key=HF_API_KEY)
+            embeddings = image_client.feature_extraction(texts, model="sentence-transformers/all-MiniLM-L6-v2")
+            emb_np = np.array(embeddings, dtype=np.float32)
+            if emb_np.ndim == 1:
+                emb_np = np.expand_dims(emb_np, axis=0)
+            return emb_np
+        except Exception as e:
+            print("DEBUG: HF Inference API embedding warning (falling back to local):", e)
+
+    # 2. Fallback: Lazy load local SentenceTransformer on demand (no background startup thread)
     global embedding_model
     if embedding_model is None:
         with embedding_lock:
             if embedding_model is None:
                 from sentence_transformers import SentenceTransformer
                 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    return embedding_model
 
-def _warmup_model():
-    try:
-        get_embedding_model()
-        print("DEBUG: Embedding model loaded & warmed up successfully.")
-    except Exception as e:
-        print("DEBUG: Embedding model warmup warning (will retry on demand):", e)
-
-threading.Thread(target=_warmup_model, daemon=True).start()
+    embeddings = embedding_model.encode(texts, convert_to_numpy=True)
+    emb_np = np.array(embeddings, dtype=np.float32)
+    if emb_np.ndim == 1:
+        emb_np = np.expand_dims(emb_np, axis=0)
+    return emb_np
 
 # ---------------- PDF STORAGE ----------------
 
@@ -621,12 +644,7 @@ def upload_pdf():
 
         pdf_chunks = chunks
 
-        model = get_embedding_model()
-        embeddings = model.encode(pdf_chunks, convert_to_numpy=True)
-
-        embeddings_np = np.array(embeddings, dtype=np.float32)
-        if embeddings_np.ndim == 1:
-            embeddings_np = np.expand_dims(embeddings_np, axis=0)
+        embeddings_np = get_embeddings_for_texts(pdf_chunks)
 
         if embeddings_np.shape[0] == 0:
             return jsonify({
@@ -719,11 +737,7 @@ def ask_pdf():
         conv_id = str(conv_id).strip()
 
     try:
-        model = get_embedding_model()
-        question_embedding = model.encode([question], convert_to_numpy=True)
-        q_emb_np = np.array(question_embedding, dtype=np.float32)
-        if q_emb_np.ndim == 1:
-            q_emb_np = np.expand_dims(q_emb_np, axis=0)
+        q_emb_np = get_embeddings_for_texts([question])
 
         k = min(3, len(pdf_chunks))
         D, I = pdf_index.search(q_emb_np, k)
@@ -901,5 +915,5 @@ def rename_chat(chat_id):
 # ---------------- RUN ----------------
 
 if __name__ == "__main__":
-    # use_reloader=False prevents watchdog on Windows from triggering infinite restart loops when transformers touches site-packages
-    app.run(debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)

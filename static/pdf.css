@@ -16,59 +16,609 @@
   display: none;
 }
 
-/* Sidebar Active PDF Status Badge */
+/* Sidebar Active PDF Status Badge Container */
+.sidebar-badge-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 12px 12px 0 12px;
+  overflow: hidden;
+}
+
 .sidebar-active-pdf {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.25);
   font-size: 0.82rem;
   color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  overflow: hidden;
+}
+
+.sidebar-active-pdf:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.sidebar-pdf-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: #10b981;
 }
 
 .sidebar-pdf-title {
   flex: 1;
+  min-width: 0; /* Ensures text ellipsis works inside flex item without overflowing parent */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
+  font-size: 0.82rem;
 }
 
-/* Composer Floating PDF Pill Indicator */
-.composer-pdf-pill {
+.sidebar-pdf-change-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 4px;
+  color: var(--text-sub);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-pdf-change-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Right-aligned User Document Bubble (Exactly like ChatGPT) */
+.user-doc-row {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin: 14px 0 16px 0;
+  animation: fadeIn 0.25s ease;
+}
+
+.chatgpt-doc-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #212121;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  max-width: 290px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+
+[data-theme="light"] .chatgpt-doc-bubble {
+  background: #f4f4f4;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.chatgpt-doc-bubble:hover {
+  background: #2f2f2f;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+[data-theme="light"] .chatgpt-doc-bubble:hover {
+  background: #eaeaea;
+}
+
+.chatgpt-pdf-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.chatgpt-doc-meta-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chatgpt-doc-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f3f4f6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+[data-theme="light"] .chatgpt-doc-name {
+  color: #0f172a;
+}
+
+.chatgpt-doc-type {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #8e8e8e;
+  margin-top: 2px;
+}
+
+/* Inline document pill in AI message (Like ChatGPT) */
+.inline-doc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #262626;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d1d5db;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  vertical-align: middle;
+  margin: 0 4px;
+}
+
+[data-theme="light"] .inline-doc-pill {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #334155;
+}
+
+.inline-doc-pill:hover {
+  background: #333333;
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+}
+
+/* Interactive AI suggestion chips / bullets */
+.chatgpt-suggestion-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chatgpt-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme="light"] .chatgpt-suggestion-item {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.chatgpt-suggestion-item:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+.chatgpt-suggestion-item::before {
+  content: '•';
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* Compact ChatGPT-Style Composer Attachment Chip */
+.chatgpt-input-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #10b981;
+  padding: 5px 12px;
+  background: #212121;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
   margin-bottom: 8px;
-  margin-left: 4px;
-  box-shadow: var(--shadow-sm);
-  animation: fadeIn 0.3s ease;
-  max-width: 900px;
+  margin-left: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  max-width: 260px;
+  width: fit-content;
+  animation: fadeIn 0.2s ease;
 }
 
-.btn-pill-change {
+[data-theme="light"] .chatgpt-input-pill {
+  background: #f4f4f4;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.chatgpt-input-pill:hover {
+  background: #2a2a2a;
+}
+
+.chatgpt-pill-icon {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.chatgpt-pill-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatgpt-pill-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  color: var(--text-sub);
-  font-size: 0.75rem;
+  color: var(--text-muted);
   cursor: pointer;
-  text-decoration: underline;
-  margin-left: 6px;
+  padding: 2px;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+
+.chatgpt-pill-close:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-attach {
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.btn-attach:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* PDF Preview Modal */
+.pdf-preview-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.25s ease;
+}
+
+.pdf-preview-overlay.active {
+  display: flex;
+}
+
+.pdf-preview-dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1100px;
+  height: 88vh;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  animation: scaleUp 0.25s ease;
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.pdf-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-glass);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pdf-preview-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pdf-file-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 38px;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+  color: white;
+  flex-shrink: 0;
+}
+
+.pdf-file-icon-badge .badge-text {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.pdf-preview-title-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdf-preview-filename {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.pdf-preview-submeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-sub);
+}
+
+.pdf-preview-submeta .meta-dot {
+  color: var(--text-muted);
+}
+
+.preview-badge-rag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #10b981;
   font-weight: 600;
 }
 
-.btn-pill-change:hover {
+.pdf-preview-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-tabs {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+}
+
+.preview-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.preview-tab.active {
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.preview-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.preview-action-icon-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
   color: var(--primary);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.preview-action-icon-btn.close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* PDF Preview Modal Body */
+.pdf-preview-body {
+  display: flex;
+  flex: 1;
+  position: relative;
+  background: var(--bg-main);
+  overflow: hidden;
+}
+
+.preview-pane {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.preview-pane.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.iframe-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.iframe-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #333639;
+}
+
+.preview-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  height: 100%;
+  color: var(--text-sub);
+}
+
+.chunks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.chunk-card {
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.chunk-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.74rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chunk-copy-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chunk-copy-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* PDF Preview Modal Footer */
+.pdf-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-glass);
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.quick-ask-hints {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-ask-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.quick-ask-chip {
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: var(--text-main);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quick-ask-chip:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 
 /* Drag hover glow on workspace */
@@ -77,3 +627,17 @@
   outline: 2px dashed var(--primary);
   outline-offset: -10px;
 }
+
+@media (max-width: 768px) {
+  .topbar-center {
+    display: none;
+  }
+  .pdf-preview-dialog {
+    height: 95vh;
+    padding: 0;
+  }
+  .preview-tabs span {
+    display: none;
+  }
+}
+
