@@ -82,38 +82,22 @@ function initTextareaAutoResize() {
   });
 }
 
-// Load Image Chats (Backend + LocalStorage 'image_chats')
 async function loadImageChats() {
-  let localData = [];
-  try {
-    const raw = localStorage.getItem('image_chats');
-    if (raw) localData = JSON.parse(raw);
-  } catch (err) {
-    console.error('Failed to parse local image_chats', err);
-  }
-
   try {
     const res = await fetch('/get_chats');
     if (res.ok) {
       const serverChats = await res.json();
-      // Filter for image chats only
-      const serverImageChats = serverChats.filter(c => c.type === 'image');
-      
-      const mergedMap = new Map();
-      serverImageChats.forEach(c => mergedMap.set(String(c.id), c));
-      localData.forEach(c => {
-        if (!mergedMap.has(String(c.id))) {
-          mergedMap.set(String(c.id), c);
-        }
-      });
-
-      currentImageChats = Array.from(mergedMap.values());
+      currentImageChats = serverChats.filter(c => c.type === 'image' || (c.messages && c.messages.some(m => m.type === 'image')));
     } else {
-      currentImageChats = localData;
+      const raw = localStorage.getItem('image_chats');
+      if (raw) currentImageChats = JSON.parse(raw);
     }
   } catch (err) {
-    console.log('Using local storage for image chats:', err);
-    currentImageChats = localData;
+    console.error('Using local storage for image chats due to error:', err);
+    try {
+      const raw = localStorage.getItem('image_chats');
+      if (raw) currentImageChats = JSON.parse(raw);
+    } catch (e) {}
   }
 
   localStorage.setItem('image_chats', JSON.stringify(currentImageChats));
@@ -130,13 +114,21 @@ function renderSidebarHistory() {
   }
 
   listContainer.innerHTML = currentImageChats.map((chat) => {
-    const title = chat.title || chat.user || 'Untitled Image';
+    const cid = String(chat.conversation_id || chat.id);
+    const title = chat.title || (chat.messages && chat.messages[0] ? chat.messages[0].user : chat.user) || 'Untitled Image';
+    const isActive = String(activeImageId) === cid;
+
     return `
-      <div class="history-item ${chat.id === activeImageId ? 'active' : ''}" onclick="selectImageChat('${chat.id}')">
+      <div class="history-item ${isActive ? 'active' : ''}" onclick="selectImageChat('${cid}')">
         <span class="history-item-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
-        <button class="history-item-del" onclick="deleteImageChat(event, '${chat.id}')" title="Delete image">
-          <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
-        </button>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <button class="history-item-del" onclick="renameImageChat(event, '${cid}')" title="Rename image" style="opacity: 0.7;">
+            <i data-lucide="pencil" style="width:13px; height:13px;"></i>
+          </button>
+          <button class="history-item-del" onclick="deleteImageChat(event, '${cid}')" title="Delete image">
+            <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -144,16 +136,35 @@ function renderSidebarHistory() {
   lucide.createIcons();
 }
 
-function selectImageChat(id) {
-  activeImageId = id;
-  const chat = currentImageChats.find(c => String(c.id) === String(id));
+async function selectImageChat(id) {
+  activeImageId = String(id);
+  const chat = currentImageChats.find(c => String(c.conversation_id || c.id) === String(id));
+
+  if (chat) {
+    try {
+      const res = await fetch(`/get_conversation/${id}`);
+      if (res.ok) {
+        const serverMsgs = await res.json();
+        if (serverMsgs && serverMsgs.length > 0) {
+          chat.messages = serverMsgs;
+        }
+      }
+    } catch (err) {
+      console.log('Using cached messages for image conversation:', err);
+    }
+  }
+
   if (!chat) return;
 
   const feed = document.getElementById('image-feed');
   feed.innerHTML = '';
 
-  renderPromptBubble(chat.user);
-  renderGeneratedImage(chat.ai, chat.user);
+  const msgs = chat.messages || [{ user: chat.user, ai: chat.ai }];
+  msgs.forEach(m => {
+    if (m.user) renderPromptBubble(m.user);
+    if (m.ai) renderGeneratedImage(m.ai, m.user);
+  });
+
   renderSidebarHistory();
   closeMobileSidebar();
 }
@@ -222,14 +233,11 @@ async function generateImage() {
   textarea.value = '';
   textarea.style.height = 'auto';
 
-  // Remove welcome state if active
   const welcome = document.getElementById('image-welcome-screen');
   if (welcome) welcome.remove();
 
-  // Render User Prompt Bubble (RIGHT side, text LEFT aligned)
   renderPromptBubble(prompt);
 
-  // Render Skeleton Loading State (LEFT side)
   const loadingId = 'img-loading-' + Date.now();
   renderImageSkeleton(loadingId);
 
@@ -240,45 +248,118 @@ async function generateImage() {
     const res = await fetch('/generate_image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt, conversation_id: activeImageId })
     });
 
     const data = await res.json();
     removeElement(loadingId);
 
     if (data.result === 'LIMIT_REACHED') {
-      alert('Prompt limit reached! Please log in to generate more images.');
+      showToast('Prompt limit reached! Please log in to generate more images.', 'warning');
       return;
     }
 
     if (data.result === 'Image generation failed' || !data.result) {
-      alert('Failed to generate image. Please try again.');
+      showToast('Failed to generate image. Please try again.', 'error');
       return;
     }
 
-    // Render Generated Image (LEFT side, preserve aspect ratio)
     renderGeneratedImage(data.result, prompt);
 
-    // Store in state & LocalStorage
-    const newObj = {
-      id: Date.now(),
-      type: 'image',
-      user: prompt,
-      ai: data.result,
-      title: prompt.substring(0, 30)
-    };
+    const convId = String(data.conversation_id || activeImageId || ('conv_' + Date.now()));
+    const targetChatId = activeImageId || convId;
+    activeImageId = convId;
 
-    currentImageChats.unshift(newObj);
+    let convObj = currentImageChats.find(c => 
+      String(c.conversation_id || c.id) === String(convId) || 
+      String(c.conversation_id || c.id) === String(targetChatId) ||
+      String(c.id) === String(convId) ||
+      String(c.id) === String(targetChatId)
+    );
+
+    if (convObj) {
+      convObj.conversation_id = convId;
+      convObj.id = convObj.id || convId;
+      if (!convObj.messages) convObj.messages = [];
+      convObj.messages.push({ id: Date.now(), user: prompt, ai: data.result, type: 'image' });
+    } else {
+      convObj = {
+        id: convId,
+        conversation_id: convId,
+        type: 'image',
+        title: prompt.substring(0, 30),
+        user: prompt,
+        ai: data.result,
+        messages: [{ id: Date.now(), user: prompt, ai: data.result, type: 'image' }]
+      };
+      currentImageChats.unshift(convObj);
+    }
+
     localStorage.setItem('image_chats', JSON.stringify(currentImageChats));
     renderSidebarHistory();
 
   } catch (err) {
     removeElement(loadingId);
     console.error('Image generation error:', err);
-    alert('Network error while generating image.');
+    showToast('Network error while generating image.', 'error');
   } finally {
     if (sendBtn) sendBtn.disabled = false;
   }
+}
+
+function renameImageChat(e, id) {
+  if (e) e.stopPropagation();
+  const chat = currentImageChats.find(c => String(c.conversation_id || c.id) === String(id));
+  if (!chat) return;
+
+  showRenameModal(chat.title || '', async (newTitle) => {
+    chat.title = newTitle;
+    localStorage.setItem('image_chats', JSON.stringify(currentImageChats));
+    renderSidebarHistory();
+
+    try {
+      const res = await fetch(`/rename_chat/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle })
+      });
+      if (res.ok) {
+        showToast('Image chat renamed', 'success');
+      } else {
+        showToast('Failed to rename image chat', 'error');
+      }
+    } catch (err) {
+      console.error('Error renaming image chat:', err);
+      showToast('Error renaming image chat', 'error');
+    }
+  });
+}
+
+function deleteImageChat(e, id) {
+  if (e) e.stopPropagation();
+
+  showDeleteModal(async () => {
+    currentImageChats = currentImageChats.filter(c => String(c.conversation_id || c.id) !== String(id));
+    localStorage.setItem('image_chats', JSON.stringify(currentImageChats));
+
+    if (String(activeImageId) === String(id)) {
+      clearImageWorkspace();
+    } else {
+      renderSidebarHistory();
+    }
+
+    try {
+      const res = await fetch(`/delete_chat/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Image chat deleted', 'success');
+      } else {
+        showToast('Failed to delete image chat', 'error');
+      }
+    } catch (err) {
+      console.log('Backend delete image chat failed:', err);
+      showToast('Error deleting image chat', 'error');
+    }
+  }, 'This saved image conversation will be permanently deleted.');
 }
 
 // User Prompt Bubble: RIGHT side, text LEFT aligned
@@ -351,26 +432,6 @@ function downloadImage(dataUrl, filename) {
   document.body.removeChild(link);
 }
 
-async function deleteImageChat(e, id) {
-  e.stopPropagation();
-  if (!confirm('Delete this saved image?')) return;
-
-  try {
-    await fetch(`/delete_chat/${id}`, { method: 'DELETE' });
-  } catch (err) {
-    console.log('Backend delete image chat failed:', err);
-  }
-
-  currentImageChats = currentImageChats.filter(c => String(c.id) !== String(id));
-  localStorage.setItem('image_chats', JSON.stringify(currentImageChats));
-
-  if (activeImageId === id) {
-    clearImageWorkspace();
-  } else {
-    renderSidebarHistory();
-  }
-}
-
 function scrollToBottom() {
   const feed = document.getElementById('image-feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
@@ -379,13 +440,4 @@ function scrollToBottom() {
 function removeElement(id) {
   const el = document.getElementById(id);
   if (el) el.remove();
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
